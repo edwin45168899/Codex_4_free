@@ -1,0 +1,467 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Todo List Demo (Pure JS)</title>
+    <style>
+      :root {
+        --bg: #0f1b17;
+        --panel: #14231e;
+        --panel-2: #0b1411;
+        --ink: #f1f7f2;
+        --muted: #b5c7be;
+        --accent: #ffb454;
+        --accent-2: #6be8c3;
+        --danger: #ff6b6b;
+        --shadow: rgba(3, 10, 8, 0.45);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Space Grotesk", "Sora", "Manrope", ui-sans-serif, system-ui, -apple-system,
+          "Segoe UI", sans-serif;
+        color: var(--ink);
+        background: radial-gradient(120% 120% at 20% 10%, #1c2d26 0%, #0b1411 55%, #050807 100%);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 32px 16px 48px;
+      }
+
+      .app {
+        width: min(920px, 100%);
+        display: grid;
+        grid-template-columns: 1.1fr 0.9fr;
+        gap: 24px;
+      }
+
+      @media (max-width: 900px) {
+        .app {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      header {
+        background: linear-gradient(135deg, rgba(255, 180, 84, 0.15), rgba(107, 232, 195, 0.1));
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        padding: 28px;
+        border-radius: 20px;
+        box-shadow: 0 24px 50px var(--shadow);
+      }
+
+      header h1 {
+        margin: 0 0 8px;
+        font-size: clamp(1.8rem, 2vw + 1.4rem, 2.6rem);
+        letter-spacing: -0.02em;
+      }
+
+      header p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.6;
+      }
+
+      .panel {
+        background: var(--panel);
+        border-radius: 22px;
+        padding: 24px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        box-shadow: 0 20px 40px var(--shadow);
+      }
+
+      .form-row {
+        display: flex;
+        gap: 12px;
+        margin-top: 18px;
+      }
+
+      input[type="text"] {
+        flex: 1;
+        background: var(--panel-2);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: var(--ink);
+        padding: 14px 16px;
+        border-radius: 14px;
+        font-size: 1rem;
+      }
+
+      input[type="text"]:focus {
+        outline: 2px solid rgba(255, 180, 84, 0.5);
+        border-color: rgba(255, 180, 84, 0.8);
+      }
+
+      button {
+        border: none;
+        cursor: pointer;
+        padding: 12px 18px;
+        border-radius: 14px;
+        font-weight: 600;
+        font-size: 0.95rem;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+
+      button:active {
+        transform: scale(0.98);
+      }
+
+      .btn-accent {
+        background: linear-gradient(135deg, var(--accent), #ff9f1a);
+        color: #1d1407;
+        box-shadow: 0 8px 18px rgba(255, 180, 84, 0.35);
+      }
+
+      .btn-ghost {
+        background: rgba(255, 255, 255, 0.06);
+        color: var(--ink);
+      }
+
+      .filters {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 20px;
+      }
+
+      .filters button {
+        background: rgba(255, 255, 255, 0.04);
+        color: var(--muted);
+        border: 1px solid transparent;
+      }
+
+      .filters button.active {
+        color: var(--ink);
+        border-color: rgba(255, 180, 84, 0.6);
+        box-shadow: inset 0 0 0 1px rgba(255, 180, 84, 0.2);
+      }
+
+      .list {
+        margin: 20px 0 0;
+        display: grid;
+        gap: 12px;
+      }
+
+      .item {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        gap: 12px;
+        align-items: center;
+        background: rgba(11, 20, 17, 0.9);
+        padding: 14px 16px;
+        border-radius: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        animation: rise 0.3s ease;
+      }
+
+      @keyframes rise {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .item.completed {
+        opacity: 0.6;
+        text-decoration: line-through;
+      }
+
+      .item .title {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .item small {
+        color: var(--muted);
+      }
+
+      .badge {
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: rgba(107, 232, 195, 0.12);
+        color: var(--accent-2);
+        font-size: 0.75rem;
+        font-weight: 600;
+      }
+
+      .meta {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 16px;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      .empty {
+        color: var(--muted);
+        text-align: center;
+        padding: 24px;
+        border: 1px dashed rgba(255, 255, 255, 0.08);
+        border-radius: 16px;
+      }
+
+      .side {
+        display: grid;
+        gap: 16px;
+      }
+
+      .stats {
+        display: grid;
+        gap: 12px;
+      }
+
+      .stat {
+        background: rgba(255, 255, 255, 0.04);
+        border-radius: 16px;
+        padding: 16px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .stat span {
+        color: var(--muted);
+      }
+
+      .hint {
+        background: rgba(255, 255, 255, 0.04);
+        border-radius: 16px;
+        padding: 16px;
+        color: var(--muted);
+        line-height: 1.6;
+      }
+
+      .danger {
+        background: rgba(255, 107, 107, 0.1);
+        color: var(--danger);
+      }
+    </style>
+  </head>
+  <body>
+    <main class="app">
+      <section>
+        <header>
+          <h1>極簡 To-do Demo</h1>
+          <p>純前端 JavaScript，支援新增、完成、篩選與 LocalStorage 保存。</p>
+          <form id="todo-form" class="form-row" autocomplete="off">
+            <input
+              id="todo-input"
+              type="text"
+              placeholder="新增任務，例如：整理提案簡報"
+              aria-label="新增任務"
+              required
+            />
+            <button class="btn-accent" type="submit">新增</button>
+          </form>
+          <div class="filters" role="tablist" aria-label="篩選">
+            <button type="button" class="active" data-filter="all">全部</button>
+            <button type="button" data-filter="active">進行中</button>
+            <button type="button" data-filter="done">已完成</button>
+          </div>
+        </header>
+
+        <div class="panel">
+          <div id="list" class="list"></div>
+          <div class="meta">
+            <span id="count">0 個任務</span>
+            <button id="clear" class="btn-ghost danger" type="button">清除已完成</button>
+          </div>
+        </div>
+      </section>
+
+      <aside class="side">
+        <div class="panel">
+          <h2 style="margin-top:0">節奏卡片</h2>
+          <div class="stats">
+            <div class="stat">
+              <div>
+                <strong id="active-count">0</strong>
+                <span>待完成</span>
+              </div>
+              <span class="badge">Focus</span>
+            </div>
+            <div class="stat">
+              <div>
+                <strong id="done-count">0</strong>
+                <span>已完成</span>
+              </div>
+              <span class="badge">Done</span>
+            </div>
+          </div>
+        </div>
+        <div class="hint">
+          提示：按 Enter 快速新增。點擊任務可切換完成狀態，右側刪除可移除單筆。
+        </div>
+      </aside>
+    </main>
+
+    <template id="item-template">
+      <div class="item">
+        <input type="checkbox" />
+        <div class="title">
+          <strong></strong>
+          <small></small>
+        </div>
+        <button class="btn-ghost" data-action="remove">刪除</button>
+      </div>
+    </template>
+
+    <script>
+      const STORAGE_KEY = "todo-demo-items";
+      const form = document.getElementById("todo-form");
+      const input = document.getElementById("todo-input");
+      const list = document.getElementById("list");
+      const count = document.getElementById("count");
+      const activeCount = document.getElementById("active-count");
+      const doneCount = document.getElementById("done-count");
+      const clearBtn = document.getElementById("clear");
+      const template = document.getElementById("item-template");
+      const filterButtons = document.querySelectorAll("[data-filter]");
+
+      let items = loadItems();
+      let currentFilter = "all";
+
+      function loadItems() {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return [];
+        try {
+          return JSON.parse(raw);
+        } catch {
+          return [];
+        }
+      }
+
+      function saveItems() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+      }
+
+      function formatTime(timestamp) {
+        const date = new Date(timestamp);
+        return date.toLocaleString("zh-Hant", {
+          month: "short",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+      }
+
+      function addItem(title) {
+        const trimmed = title.trim();
+        if (!trimmed) return;
+        const newItem = {
+          id: crypto.randomUUID(),
+          title: trimmed,
+          createdAt: Date.now(),
+          done: false,
+        };
+        items = [newItem, ...items];
+        saveItems();
+        render();
+      }
+
+      function toggleItem(id) {
+        items = items.map((item) =>
+          item.id === id ? { ...item, done: !item.done } : item
+        );
+        saveItems();
+        render();
+      }
+
+      function removeItem(id) {
+        items = items.filter((item) => item.id !== id);
+        saveItems();
+        render();
+      }
+
+      function clearCompleted() {
+        items = items.filter((item) => !item.done);
+        saveItems();
+        render();
+      }
+
+      function setFilter(filter) {
+        currentFilter = filter;
+        filterButtons.forEach((btn) => {
+          btn.classList.toggle("active", btn.dataset.filter === filter);
+        });
+        render();
+      }
+
+      function getFilteredItems() {
+        if (currentFilter === "active") {
+          return items.filter((item) => !item.done);
+        }
+        if (currentFilter === "done") {
+          return items.filter((item) => item.done);
+        }
+        return items;
+      }
+
+      function render() {
+        const visibleItems = getFilteredItems();
+        list.innerHTML = "";
+
+        if (visibleItems.length === 0) {
+          const empty = document.createElement("div");
+          empty.className = "empty";
+          empty.textContent = "目前沒有任務，新增一個吧。";
+          list.append(empty);
+        } else {
+          visibleItems.forEach((item) => {
+            const node = template.content.firstElementChild.cloneNode(true);
+            const checkbox = node.querySelector("input");
+            const title = node.querySelector("strong");
+            const time = node.querySelector("small");
+            const removeButton = node.querySelector("[data-action='remove']");
+
+            node.classList.toggle("completed", item.done);
+            checkbox.checked = item.done;
+            title.textContent = item.title;
+            time.textContent = formatTime(item.createdAt);
+
+            checkbox.addEventListener("change", () => toggleItem(item.id));
+            title.addEventListener("click", () => toggleItem(item.id));
+            removeButton.addEventListener("click", () => removeItem(item.id));
+
+            list.append(node);
+          });
+        }
+
+        const total = items.length;
+        const done = items.filter((item) => item.done).length;
+        const active = total - done;
+
+        count.textContent = `${total} 個任務`;
+        activeCount.textContent = active;
+        doneCount.textContent = done;
+
+        clearBtn.disabled = done === 0;
+      }
+
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        addItem(input.value);
+        input.value = "";
+        input.focus();
+      });
+
+      clearBtn.addEventListener("click", clearCompleted);
+
+      filterButtons.forEach((btn) => {
+        btn.addEventListener("click", () => setFilter(btn.dataset.filter));
+      });
+
+      render();
+    </script>
+  </body>
+</html>
